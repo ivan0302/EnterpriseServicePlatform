@@ -1,0 +1,27 @@
+
+# .NET build output
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Test results
+**/TestResults/
+
+# Logs
+*.log
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.Development.json

@@ -1,8 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using ServicePlatform.Api.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+// Register Entity Framework Core and SQL Server.
+var connectionString = builder.Configuration
+    .GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' was not found.");
+
+builder.Services.AddDbContext<ServicePlatformDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 

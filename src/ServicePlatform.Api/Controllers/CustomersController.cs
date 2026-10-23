@@ -1,58 +1,90 @@
+
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ServicePlatform.Api.Data;
-using ServicePlatform.Api.Models;
 using ServicePlatform.Api.DTOs;
+using ServicePlatform.Api.Services;
 
 namespace ServicePlatform.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class CustomersController(ServicePlatformDbContext dbContext) : ControllerBase
+public sealed class CustomersController(ICustomerService customerService)
+    : ControllerBase
 {
-    
     [HttpGet]
-    public async Task<ActionResult<List<CustomerResponse>>> GetCustomers(CancellationToken cancellationToken)
+    public async Task<ActionResult<List<CustomerResponse>>> GetCustomers(
+        CancellationToken cancellationToken)
     {
-        var customers = await dbContext.Customers
-        .AsNoTracking()
-        .OrderBy(c => c.Name)
-        .Select(c => new CustomerResponse(c.Id, c.Name, c.Email, c.CreatedAtUtc))
-        .ToListAsync(cancellationToken);
+        var customers = await customerService.GetCustomersAsync(
+            cancellationToken);
+
         return Ok(customers);
     }
 
     [HttpPost]
-    public async Task<ActionResult<CustomerResponse>> CreateCustomer([FromBody] CreateCustomerRequest request
-    , CancellationToken cancellationToken)
+    public async Task<ActionResult<CustomerResponse>> CreateCustomer(
+        [FromBody] CreateCustomerRequest request,
+        CancellationToken cancellationToken)
     {
-        var customer = new Customer
-        {
-            Name = request.Name,
-            Email = request.Email,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-        dbContext.Customers.Add(customer);
+        var customer = await customerService.CreateCustomerAsync(
+            request,
+            cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        
-        var response = new CustomerResponse(customer.Id, customer.Name, customer.Email, customer.CreatedAtUtc);
-
-        return CreatedAtAction(nameof(GetCustomers), new { id = customer.Id }, response);
+        return CreatedAtAction(
+            nameof(GetCustomer),
+            new { id = customer.Id },
+            customer);
     }
-    
+
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<CustomerResponse>> GetCustomer(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<CustomerResponse>> GetCustomer(
+        int id,
+        CancellationToken cancellationToken)
     {
-        var customer = await dbContext.Customers
-        .AsNoTracking()
-        .Where(c => c.Id == id)
-        .Select(c => new CustomerResponse(c.Id, c.Name, c.Email, c.CreatedAtUtc))   
-        .FirstOrDefaultAsync(cancellationToken);
-        if (customer == null)
+        var customer = await customerService.GetCustomerByIdAsync(
+            id,
+            cancellationToken);
+
+        if (customer is null)
         {
             return NotFound();
         }
+
         return Ok(customer);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult> UpdateCustomer(
+        int id,
+        [FromBody] CreateCustomerRequest request,
+        CancellationToken cancellationToken)
+    {
+        var updated = await customerService.UpdateCustomerAsync(
+            id,
+            request,
+            cancellationToken);
+
+        if (!updated)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> DeleteCustomer(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var deleted = await customerService.DeleteCustomerAsync(
+            id,
+            cancellationToken);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
     }
 }

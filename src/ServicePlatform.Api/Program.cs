@@ -5,6 +5,7 @@ using ServicePlatform.Api.Exceptions;
 using ServicePlatform.Api.Middleware;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,23 +46,19 @@ builder.Services
             {
                 options.Endpoint = new Uri("http://localhost:4317");
                 options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-            }));
-
-// builder.Services
-//     .AddOpenTelemetry()
-//     .ConfigureResource(resource =>
-//         resource.AddService("EnterpriseServicePlatform.Api"))
-//     .WithTracing(tracing =>
-//         tracing
-//             .AddAspNetCoreInstrumentation()
-//             .AddHttpClientInstrumentation()
-//             .AddOtlpExporter(options =>
-//             {
-//                 options.Endpoint = new Uri("http://localhost:4317");
-//                 options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-//             }));
+            }))
+    .WithMetrics(metrics =>
+        metrics
+            .AddMeter(
+                "Microsoft.AspNetCore.Hosting",
+                "Microsoft.AspNetCore.Server.Kestrel",
+                "Microsoft.AspNetCore.Routing",
+                "System.Net.Http")
+            .AddPrometheusExporter());
 
 var app = builder.Build();
+
+app.MapPrometheusScrapingEndpoint();
 
 app.MapHealthChecks("/health");
 

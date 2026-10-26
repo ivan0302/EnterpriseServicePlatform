@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using ServicePlatform.Api.Monitoring;
 using Microsoft.EntityFrameworkCore;
 using ServicePlatform.Api.Data;
 using ServicePlatform.Api.Services;
@@ -53,14 +55,35 @@ builder.Services
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Server.Kestrel",
                 "Microsoft.AspNetCore.Routing",
-                "System.Net.Http")
+                "System.Net.Http",
+                "EnterpriseServicePlatform.Health")
             .AddPrometheusExporter());
+
+builder.Services.AddSingleton<HealthStatusMetrics>();
 
 var app = builder.Build();
 
 app.MapPrometheusScrapingEndpoint();
 
-app.MapHealthChecks("/health");
+app.MapGet("/health", async (
+    HealthCheckService healthCheckService,
+    HealthStatusMetrics healthMetrics) =>
+{
+    var report = await healthCheckService.CheckHealthAsync();
+
+    var isHealthy = report.Status == HealthStatus.Healthy;
+
+    healthMetrics.SetHealthStatus(isHealthy);
+
+    if (isHealthy)
+    {
+        return Results.Ok(new { status = "Healthy" });
+    }
+
+    return Results.Json(
+        new { status = report.Status.ToString() },
+        statusCode: StatusCodes.Status503ServiceUnavailable);
+});
 
 // Log each HTTP request, including handled failures.
 app.UseMiddleware<RequestLoggingMiddleware>();
@@ -83,7 +106,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 

@@ -100,4 +100,52 @@ public class CustomerApiIntegrationTests
             response.StatusCode);
     }
 
+    
+    [Fact]
+    public async Task GetCustomer_WithNonExistingId_ShouldReturn404NotFound()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/customers/999999");
+
+        // Assert
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+    }
+
+    
+    [Fact]
+    public async Task UpdateCustomer_WithNonExistingId_ShouldReturn404NotFound()
+    {
+        // Arrange
+        var request = new CreateCustomerRequest
+        {
+            Name = "Non-existing Customer",
+            Email = "missing@example.com"
+        };
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            "/api/customers/999999",
+            request);
+
+        // Assert
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteCustomer_WithNonExistingId_ShouldReturn404NotFound()
+    {
+        // Act
+        var response = await _client.DeleteAsync(
+            "/api/customers/999999");
+
+        // Assert
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+    }
+
 }
